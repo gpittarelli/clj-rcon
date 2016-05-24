@@ -50,3 +50,13 @@
          d/error-deferred)
      recv-auth-response!)))
 
+(defn exec [connection cmd]
+  (let [req-id (rand-int 0x7fffffff)
+        response (d/deferred)]
+    (s/put! connection (codecs/exec req-id cmd))
+    (d/timeout! response 2000 :timeout)
+    (future []
+            (d/success! response
+                        (:body @(s/take! (s/filter #(= (:id %) req-id)
+                                                   connection)))))
+    response))
