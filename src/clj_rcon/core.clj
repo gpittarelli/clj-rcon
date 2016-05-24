@@ -6,26 +6,24 @@
             [clj-rcon.codecs :as codecs])
   (:import [java.io ByteArrayInputStream ByteArrayOutputStream]))
 
-(defn encode->bytes [codec data]
+(defn- encode->bytes [codec data]
   (let [bao (java.io.ByteArrayOutputStream.)]
     (b/encode codec bao data)
-    (seq (.toByteArray bao))))
+    (.toByteArray bao)))
 
-(defn bytes->decode [codec data]
-  (let [bao (java.io.ByteArrayOutputStream.)]
-    (b/encode codec bao data)
-    (seq (.toByteArray bao))))
+(defn- bytes->decode [codec data]
+  (b/decode codec (java.io.ByteArrayInputStream. data)))
 
-(defn encode-rcon [data]
+(defn- encode-rcon [data]
   (encode->bytes codecs/rcon-packet-codec data))
 
-(defn decode-rcon [data]
-  (encode->bytes codecs/rcon-packet-codec data))
+(defn- decode-rcon [data]
+  (bytes->decode codecs/rcon-packet-codec data))
 
-(defn wrap-rcon [s]
-  (let [out (s/stream)]
-    (s/connect (s/map encode-rcon out) s)
-    (s/splice out s)))
+(defn- wrap-rcon [s]
+  (let [wrapped (s/stream)]
+    (s/connect (s/map encode-rcon wrapped) s)
+    (s/splice wrapped (s/transform cat (s/map decode-rcon s)))))
 
 (defn connect
   "Connects to a Source RCON server at host on port, identified by
@@ -34,10 +32,21 @@
 
   Returns a manifold stream."
   [host port password]
-  (let [send! (fn [data] #(do (s/put! % (encode-rcon data)) %))
-        recv! (fn [] #(do (println (s/take! %)) %))]
+  (let [conn (tcp/client {:host host :port port})
+        auth-req-id 0
+        auth (codecs/auth auth-req-id password)
+        send-auth! #(do (s/put! % auth) %)
+        recv-auth-response!
+        (fn [rcon]
+          (let [recv! #(deref (s/try-take! rcon 3000))
+                _ (recv!)
+                auth-response (recv!)]
+            (if (and (= (:type auth-response) codecs/serverdata-auth-response)
+                     (= (:id auth-response) auth-req-id))
+              rcon
+              (throw (Exception. "bad password")))))]
     (d/chain
-     (tcp/client {:host host :port port})
-     wrap-rcon
-     #(do (s/put! % (codecs/auth 0 password)) %)
-     )))
+     (d/catch @(d/chain conn wrap-rcon send-auth!)
+         d/error-deferred)
+     recv-auth-response!)))
+

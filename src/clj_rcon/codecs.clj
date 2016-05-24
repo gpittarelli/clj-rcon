@@ -11,12 +11,16 @@
       (b/write-data as-codec big-out little-out (+ offset (count value))))))
 
 (def rcon-packet-codec
-  (b/ordered-map
-   :body (str-length :int-le :offset 10)
-   :id :int-le
-   :type :int-le
-   :body (b/c-string "ASCII")
-   :null (b/constant :byte 0)))
+  (b/compile-codec
+   (b/repeated
+    (b/ordered-map
+     :body (str-length :int-le :offset 10)
+     :id :int-le
+     :type :int-le
+     :body (b/c-string "ASCII")
+     :null (b/constant :byte 0)))
+   (fn [in] (if (seq? in) in [in]))
+   identity))
 
 (def serverdata-auth 3)
 (def serverdata-auth-response 2)
