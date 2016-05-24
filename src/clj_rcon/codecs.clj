@@ -20,7 +20,7 @@
      :body (b/c-string "ASCII")
      :null (b/constant :byte 0)))
    (fn [in] (if (seq? in) in [in]))
-   identity))
+   (fn [out] (map #(dissoc % :null) out))))
 
 (def serverdata-auth 3)
 (def serverdata-auth-response 2)
