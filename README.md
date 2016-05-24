@@ -7,18 +7,34 @@ administering Source engine powered game servers (TF2, L4D, etc.).
 
 The protocol: https://developer.valvesoftware.com/wiki/Source_RCON_Protocol
 
+This implementation is barely working currently. It needs support for
+split responses and, currently, is very likely to be awfully
+inefficient with connections.
+
 ## Usage
 
-This library provides a single function: `(connect host port
-password)`. `host` can be a string or `InetAddress`. `port` is a
-number. `password` is a string.
+This library provides two functions: `connect` and `exec`.
 
-Read `(doc clj-rcon/connect)` for more.
+`(connect host port password)`. `host` can be a string or
+`InetAddress`. `port` is a number. `password` is a string. Read `(doc
+clj-rcon/connect)` for more.
+
+`(exec stream command)`. `connection` is a manifold stream;
+specifically: one setup by a successful `connect` (a deref of the
+return value of an individual `connect` call). Command is a rcon
+command string to send to the server. A manifold deferred is
+returned. It may resolve to a `:timeout` keyword, else the response of
+the command, as a string.
 
 ## Example
 
 ```clojure
-user>  ;; TODO
+user> (def c (clj-rcon.core/connect "example.com" 27015 "rc0npassw0rd"))
+#'user/c
+user> (def q (clj-rcon.core/exec @c "status"))
+#'user/q
+user> @q
+"hostname: ...\nrest of the status message"
 ```
 
 ## License
