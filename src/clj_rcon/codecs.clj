@@ -3,24 +3,27 @@
             [clojure.string :as str]
             [clojure.set :refer [map-invert]]))
 
-(defn- str-length [as-codec & {:keys [offset] :or {:offset 0}}]
+(defn- write-only-str-length [as-codec & {:keys [offset] :or {:offset 0}}]
   (reify b/BinaryIO
-    (read-data  [_ big-in little-in]
-      (b/read-data as-codec big-in little-in))
+    ;; For our specific use case: only ever write the header when
+    ;; encoding; for reading/decoding, we'll handle the framing at
+    ;; a higher level
+    (read-data  [_ big-in little-in])
     (write-data [_ big-out little-out value]
       (b/write-data as-codec big-out little-out (+ offset (count value))))))
 
-(def rcon-packet-codec
+(def framing-codec :int-le)
+
+(def packet-codec
   (b/compile-codec
-   (b/repeated
-    (b/ordered-map
-     :body (str-length :int-le :offset 10)
-     :id :int-le
-     :type :int-le
-     :body (b/c-string "ASCII")
-     :null (b/constant :byte 0)))
-   (fn [in] (if (seq? in) in [in]))
-   (fn [out] (map #(dissoc % :null) out))))
+   (b/ordered-map
+    :body (write-only-str-length framing-codec :offset 10)
+    :id :int-le
+    :type :int-le
+    :body (b/c-string "ASCII")
+    :null (b/constant :byte 0))
+   identity
+   #(dissoc % :null)))
 
 (def serverdata-auth 3)
 (def serverdata-auth-response 2)
