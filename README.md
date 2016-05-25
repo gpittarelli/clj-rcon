@@ -7,9 +7,7 @@ administering Source engine powered game servers (TF2, L4D, etc.).
 
 The protocol: https://developer.valvesoftware.com/wiki/Source_RCON_Protocol
 
-This implementation is barely working currently. It needs support for
-split responses and, currently, is very likely to be awfully
-inefficient with connections.
+Warning: almost no optimization effort has been put into this library.
 
 ## Usage
 
