@@ -3,7 +3,7 @@
             [clojure.string :as str]
             [clojure.set :refer [map-invert]]))
 
-(defn- write-only-str-length [as-codec & {:keys [offset] :or {:offset 0}}]
+(defn- write-only-str-length [as-codec & {:keys [offset] :or {offset 0}}]
   (reify b/BinaryIO
     ;; For our specific use case: only ever write the header when
     ;; encoding; for reading/decoding, we'll handle the framing at
