@@ -1,4 +1,4 @@
-(defproject clj-rcon "0.1.0"
+(defproject clj-rcon "0.1.1"
   :description "Source RCON protocol implementation"
   :url "https://github.com/gpittarelli/clj-rcon"
   :license {:name "MIT License"
